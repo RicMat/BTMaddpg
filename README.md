@@ -4,7 +4,7 @@
 The folder mpe contains the openai's multi-particle environment. 
 In mpe/multiagent/scenarios there are the different scenarios used to train the agents.
 We mainly concentrate on communications, so the base scenarios in which we are interested are simple_speaker_listener 
-and simple spread.
+and simple_spread.
 
 ## Training
 To start training, one should run train.py which is inside maddpg/xperiments. 
