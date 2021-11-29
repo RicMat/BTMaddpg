@@ -6,6 +6,7 @@ import pickle
 
 import maddpg.common.tf_util as U
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
+from maddpg.trainer.maddpg_approx import MADDPGApproxAgentTrainer
 import tensorflow.contrib.layers as layers
 
 def parse_args():
@@ -154,7 +155,10 @@ def train(arglist):
             for agent in trainers:
                 agent.preupdate()
             for agent in trainers:
+                # normal
                 loss = agent.update(trainers, train_step)
+                # approx
+                # loss = agent.update(trainers)
 
             # save model, display training output
             if terminal and (len(episode_rewards) % arglist.save_rate == 0):

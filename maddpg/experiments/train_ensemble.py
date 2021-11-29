@@ -6,13 +6,21 @@ import tensorflow as tf
 import time
 import pickle
 
-import multiagent_rl.common.tf_util as U
+import maddpg.common.tf_util as U
+import tensorflow.contrib.layers as layers
 
-from multiagent_rl.trainer.ddpg import DDPGAgentTrainer
-from multiagent_rl.trainer.maddpg_ensemble import MADDPGEnsembleAgentTrainer
-from multiagent_rl.trainer.qac import QACAgentTrainer
-from multiagent_rl.trainer.pg import PGAgentTrainer, FeedbackPGAgentTrainer
-from model import mlp_model
+from maddpg.trainer.maddpg_ensemble import MADDPGEnsembleAgentTrainer
+
+
+def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
+    # This model takes as input an observation and returns values of all actions
+    with tf.variable_scope(scope, reuse=reuse):
+        out = input
+        out = layers.fully_connected(out, num_outputs=num_units, activation_fn=tf.nn.relu)
+        out = layers.fully_connected(out, num_outputs=num_units, activation_fn=tf.nn.relu)
+        out = layers.fully_connected(out, num_outputs=num_outputs, activation_fn=None)
+        return out
+
 
 class MyLogger:
     def __init__(self, logdir, clear_file = False):
@@ -80,8 +88,8 @@ def make_env(scenario_name, args):
     return env
 
 def display(**vars):
-    import pdb; pdb.set_trace()
-    return        
+    time.sleep(0.1)
+    env.render()
     # if terminal and (len(episode_rewards) % args.save_rate == 0):
     # # if len(trainers[0].replay_buffer) > (args.batch_size * args.max_episode_len):
     #     plt.clf()
@@ -117,14 +125,11 @@ if __name__ == '__main__':
         #    "agent_%d" % 0, mlp_model, obs_shape_n, env.action_space, 0, args))
         #trainers.append(DDPGAgentTrainer(
         #    "agent_%d" % 0, mlp_model, obs_shape_n[0], env.action_space[0], args))
-        for i,agent in enumerate(env.world.all_agents):
+        obs_shape_n = [env.observation_space[i].shape for i in range(env.n)]
+        for i,agent in enumerate(env.world.agents):
             # TODO: Super Hacky Now! Assume obs_shape_n[0] is own input
             #  >> current: adversary agents, then good agents
-            if agent.adversary:
-                obs_shape_n = [env.observation_space[j].shape for j in range(env.n)]  # adversary is the first
-            else:
-                obs_shape_n = [env.observation_space[env.n - 1].shape] \
-                              + [env.observation_space[j].shape for j in range(env.n - 1)]  # adversary is the first
+
             trainers.append(MADDPGEnsembleAgentTrainer(
                 "agent_%d" % i, mlp_model, obs_shape_n, env.action_space, i, args)) # TODO
             #trainers.append(DDPGAgentTrainer(
@@ -152,10 +157,11 @@ if __name__ == '__main__':
 
         logger = MyLogger(args.save_dir + (args.eval_output or 'progress.txt'), not args.restore)
         last_time = time.time()
+        print("starting")
         while True:
             # get action
-            cur_trainers = [trainers[agent.index] for agent in env.world.agents]
-            action_n = [agent.action(obs) for agent, obs in zip(cur_trainers,obs_n)]
+            # cur_trainers = trainers #[trainers[agent.index] for agent in env.world.agents]
+            action_n = [agent.action(obs) for agent, obs in zip(trainers, obs_n)]
             # environment step
             new_obs_n, rew_n, done_n, _ = env.step(action_n, episode_step)
             episode_step += 1                
