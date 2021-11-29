@@ -1,0 +1,5 @@
+numpy~=1.21.2
+tensorflow~=1.14.0
+maddpg~=0.0.1
+multiagent~=0.0.1
+setuptools~=57.0.0
