@@ -2,7 +2,7 @@ import numpy as np
 from multiagent.core import Landmark
 
 # partial observability
-VIEW_DISTANCE = 1
+VIEW_DISTANCE = 0.5
 
 def distance(p1, p2):
     vector = p2 - p1
@@ -12,10 +12,8 @@ def distance(p1, p2):
 def obscure_pos(agent_pos, entity_pos):
     v, d = distance(agent_pos, entity_pos)
     if d <= VIEW_DISTANCE:
-        return agent_pos - entity_pos
-        # return v
+        return v
     else:
-        # print("qtf")
         return np.zeros(v.shape)
 
 def obscure_vel(agent_pos, entity_pos, entity_vel):
@@ -34,13 +32,13 @@ def obscure_col(agent_pos, entity_pos, entity_color):
 
 # observation noise
 OBS_NOISE_DIM = 5
-OBS_NOISE_VAR = 10
+OBS_NOISE_VAR = 5
 
 def get_noise():
     return [np.random.randn(OBS_NOISE_DIM) * OBS_NOISE_VAR]
 
 # environment noise
-ENV_NOISE_VAR = 10
+ENV_NOISE_VAR = 5
 ENV_NOISE_DISTANCE = 0.5
 
 def create_noise_field(world_dim):

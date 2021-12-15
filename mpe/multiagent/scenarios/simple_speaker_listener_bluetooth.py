@@ -70,13 +70,13 @@ class Scenario(BaseScenario):
         a = world.agents[0]
         dist2 = np.sum(np.square(a.goal_a.state.p_pos - a.goal_b.state.p_pos))
         # print(world.stepp)
-        if world.stepp < 0:
-            if a.communicating:
-                # print("-")
-                dist2 -= 1
-            else:
-                # print("exxx")
-                dist2 += 1
+        # if world.stepp < 0:
+        #     if a.communicating:
+        #         # print("-")
+        #         dist2 -= 1
+        #     else:
+        #         # print("exxx")
+        #         dist2 += 1
         return -dist2
 
     def observation(self, agent, world):
@@ -94,13 +94,17 @@ class Scenario(BaseScenario):
         for entity in world.landmarks:
             # entity_pos.append(obscure_pos(agent.state.p_pos, entity.state.p_pos))
             entity_pos.append((entity.state.p_pos - agent.state.p_pos))
+        for other in world.agents:
+            if other is agent:
+                continue
+            entity_pos.append((other.state.p_pos - agent.state.p_pos))
 
         # communication of all other agents
         comm = []
         for other in world.agents:
             if other is agent or (other.state.c is None):
                 continue
-            if np.sum(obscure_pos(other.state.p_pos, agent.state.p_pos)) > 0:
+            if np.sum(obscure_pos(other.state.p_pos, agent.state.p_pos)) < 0.5:
                 comm.append(other.state.c)
                 agent.communicating = True
             else:
@@ -122,4 +126,3 @@ class Scenario(BaseScenario):
 
             return np.concatenate([goal_color] + [agent.state.p_vel] + entity_pos + comm)
             # return np.concatenate([goal_color] + [agent.state.p_vel] + entity_pos)
-
