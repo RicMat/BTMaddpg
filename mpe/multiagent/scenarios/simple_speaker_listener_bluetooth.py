@@ -4,6 +4,11 @@ from multiagent.scenarios.scenario_util import obscure_pos
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
+def distance(p1, p2):
+    vector = p2 - p1
+    d = np.sqrt(np.sum(np.square(vector)))
+    return d
+
 
 class Scenario(BaseScenario):
     def make_world(self):
@@ -70,13 +75,13 @@ class Scenario(BaseScenario):
         a = world.agents[0]
         dist2 = np.sum(np.square(a.goal_a.state.p_pos - a.goal_b.state.p_pos))
         # print(world.stepp)
-        # if world.stepp < 0:
-        #     if a.communicating:
-        #         # print("-")
-        #         dist2 -= 1
-        #     else:
-        #         # print("exxx")
-        #         dist2 += 1
+        if world.stepp < 10:
+            if a.communicating:
+                # print("-")
+                dist2 -= 1
+            else:
+                # print("exxx")
+                dist2 += 1
         return -dist2
 
     def observation(self, agent, world):
@@ -104,7 +109,8 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent or (other.state.c is None):
                 continue
-            if np.sum(obscure_pos(other.state.p_pos, agent.state.p_pos)) < 0.5:
+            if distance(other.state.p_pos, agent.state.p_pos) < 0.5:
+                # print(distance(other.state.p_pos, agent.state.p_pos))
                 comm.append(other.state.c)
                 agent.communicating = True
             else:
@@ -119,7 +125,7 @@ class Scenario(BaseScenario):
             for other in world.agents:
                 if other is agent or (other.state.c is None):
                     continue
-                if agent.communicating > 0:
+                if agent.communicating:
                     goal_color = other.goal_b.color
                 else:
                     goal_color = (np.zeros(world.dim_color))

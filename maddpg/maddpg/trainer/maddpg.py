@@ -6,6 +6,8 @@ import maddpg.common.tf_util as U
 from maddpg.common.distributions import make_pdtype
 from maddpg import AgentTrainer
 from maddpg.trainer.replay_buffer import ReplayBuffer
+from intrinsic_reward.rnd.rnd import RND
+from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 
 
 def discount_with_dones(rewards, dones, gamma):
@@ -109,9 +111,35 @@ def q_train(make_obs_ph_n, act_space_n, q_index, q_func, optimizer, grad_norm_cl
 
         return train, update_target_q, {'q_values': q_values, 'target_q_values': target_q_values}
 
+
+def extract_sizes(spaces):
+    """
+    Extract space dimensions
+    :param spaces: list of Gym spaces
+    :return: list of ints with sizes for each agent
+    """
+    sizes = []
+    for space in spaces:
+        if isinstance(space, Box):
+            size = sum(space.shape)
+        elif isinstance(space, Dict):
+            size = sum(extract_sizes(space.values()))
+        elif isinstance(space, Discrete) or isinstance(space, MultiBinary):
+            size = space.n
+        elif isinstance(space, MultiDiscrete):
+            size = sum(space.nvec)
+        else:
+            raise ValueError("Unknown class of space: ", type(space))
+        sizes.append(size)
+    return sizes
+
+
 class MADDPGAgentTrainer(AgentTrainer):
     def __init__(self, name, model, obs_shape_n, act_space_n, agent_index, args, local_q_func=False):
         self.name = name
+        observation_sizes = obs_shape_n[agent_index][0]
+        action_sizes = extract_sizes(act_space_n)[agent_index]
+        self.algo = RND(observation_sizes, action_sizes)
         self.n = len(obs_shape_n)
         self.agent_index = agent_index
         self.args = args
