@@ -4,6 +4,9 @@ from multiagent.scenarios.scenario_util import obscure_pos
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
+COMMS_DISTANCE = 0.5
+EXTRA_REWARD = False
+
 def distance(p1, p2):
     vector = p2 - p1
     d = np.sqrt(np.sum(np.square(vector)))
@@ -75,7 +78,8 @@ class Scenario(BaseScenario):
         a = world.agents[0]
         dist2 = np.sum(np.square(a.goal_a.state.p_pos - a.goal_b.state.p_pos))
         # print(world.stepp)
-        if world.stepp < 10:
+
+        if world.stepp < 10 and EXTRA_REWARD:
             if a.communicating:
                 # print("-")
                 dist2 -= 1
@@ -109,7 +113,7 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent or (other.state.c is None):
                 continue
-            if distance(other.state.p_pos, agent.state.p_pos) < 0.5:
+            if distance(other.state.p_pos, agent.state.p_pos) < COMMS_DISTANCE:
                 # print(distance(other.state.p_pos, agent.state.p_pos))
                 comm.append(other.state.c)
                 agent.communicating = True
