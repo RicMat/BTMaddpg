@@ -69,10 +69,10 @@ def make_env(scenario_name, arglist, benchmark=False):
     # create world
     world = scenario.make_world()
     # create multiagent environment
-    if benchmark:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data)
-    else:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
+    # if benchmark:
+    #     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data)
+    # else:
+    env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
     return env
 
 
@@ -140,11 +140,11 @@ def train(arglist):
             for i, agent in enumerate(trainers):
                 # agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
 
-                # if not arglist.display:
-                #     curiosities = agent.algo.compute_intrinsic_reward(torch.FloatTensor(obs_n[i]),
-                #                                                       torch.FloatTensor(action_n[i]),
-                #                                                       torch.FloatTensor(new_obs_n[i]), False, True)
-                #     rew_n[i] += curiosities.item()
+                if not arglist.display:
+                    curiosities = agent.algo.compute_intrinsic_reward(torch.FloatTensor(obs_n[i]),
+                                                                      torch.FloatTensor(action_n[i]),
+                                                                      torch.FloatTensor(new_obs_n[i]), False, True)
+                    rew_n[i] += curiosities.item()
 
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
 
@@ -177,7 +177,7 @@ def train(arglist):
                 agent.preupdate()
             for agent in trainers:
                 # normal
-                loss = agent.update(trainers, train_step)
+                loss = agent.update(trainers)# , train_step)
                 # approx
                 # loss = agent.update(trainers)
             if terminal and len(episode_rewards) % 100 == 0:

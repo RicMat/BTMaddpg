@@ -4,17 +4,17 @@ import numpy as np
 import os
 import tensorflow as tf
 import time
+import torch
 import pickle
 
 import maddpg.common.tf_util as U
 import tensorflow.contrib.layers as layers
 
-# from multiagent_rl.trainer.ddpg import DDPGAgentTrainer
+from maddpg.trainer.maddpg import MADDPGAgentTrainer
 from maddpg.trainer.maddpg_approx import MADDPGApproxAgentTrainer
-# from multiagent_rl.trainer.maddpg_ensemble import MADDPGEnsembleAgentTrainer
-# from multiagent_rl.trainer.qac import QACAgentTrainer
-# from multiagent_rl.trainer.pg import PGAgentTrainer, FeedbackPGAgentTrainer
-
+from maddpg.trainer.maddpg_ensemble import MADDPGEnsembleAgentTrainer
+from maddpg.trainer.qac import QACAgentTrainer
+from maddpg.trainer.pg import PGAgentTrainer, FeedbackPGAgentTrainer
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
     # This model takes as input an observation and returns values of all actions
@@ -25,9 +25,8 @@ def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=Non
         out = layers.fully_connected(out, num_outputs=num_outputs, activation_fn=None)
         return out
 
-
 class MyLogger:
-    def __init__(self, logdir, clear_file = False):
+    def __init__(self, logdir, clear_file=False):
         self.fname = logdir
         if clear_file:
             import os
@@ -36,11 +35,12 @@ class MyLogger:
             except OSError:
                 pass
 
-    def print(self, str, to_screen = True):
+    def print(self, str, to_screen=True):
         if to_screen:
             print(str)
         with open(self.fname, 'a') as f:
             print(str, file=f)
+
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -53,21 +53,24 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=1024, help="number of episodes to optimize at the same time")
     parser.add_argument("--max-episode-len", type=int, default=25, help="maximum episode length")
     # Checkpointing
-    parser.add_argument("--save-dir", type=str, default="/tmp/policy/", help="directory in which training state and model should be saved")
-    parser.add_argument("--save-rate", type=int, default=1000, help="save model once every time this many episodes are completed")
+    parser.add_argument("--save-dir", type=str, default="/tmp/policy/",
+                        help="directory in which training state and model should be saved")
+    parser.add_argument("--save-rate", type=int, default=1000,
+                        help="save model once every time this many episodes are completed")
     # Evaluation
     parser.add_argument("--no-sync-replay", action="store_false", dest="sync_replay")
     parser.set_defaults(sync_deplay=True)
     parser.add_argument("--use-true-policy", action="store_false", dest="use_approx_policy")
     parser.set_defaults(use_approx_policy=True)
     parser.add_argument("--update-gap", type=int, default=100)
-    parser.add_argument("--total-episodes", type=int, default=30000)
+    parser.add_argument("--total-episodes", type=int, default=10000)
     parser.add_argument("--restore", action="store_true", default=False)
     parser.add_argument("--display", action="store_true", default=False)
     parser.add_argument("--evaluate", action="store_true", default=False)
     parser.add_argument("--eval-output", type=str)
     parser.add_argument("--pickle-file", type=str)
     return parser.parse_args()
+
 
 def make_env(scenario_name, args):
     from multiagent.environment import MultiAgentEnv
@@ -78,14 +81,14 @@ def make_env(scenario_name, args):
     # create world
     world = scenario.make_world()
     # create multiagent environment
-    env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)  
+    env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
     return env
 
+
 def display(**vars):
-    time.sleep(0.1)
-    env.render()
-    # import pdb; pdb.set_trace()
-    # return
+    import pdb;
+    pdb.set_trace()
+    return
     # if terminal and (len(episode_rewards) % args.save_rate == 0):
     # # if len(trainers[0].replay_buffer) > (args.batch_size * args.max_episode_len):
     #     plt.clf()
@@ -99,7 +102,7 @@ def display(**vars):
     #     plt.imshow(np.reshape(Q,[w,w]))
     #     plt.subplot(1, 2, 2)
     #     plt.imshow(np.reshape(target_Q,[w,w]))
-        
+
     #     # for i in range(5):
     #     #     plt.subplot(1, 5, 1+i)
     #     #     plt.imshow(np.reshape(Q[:,i],[w,w]))
@@ -109,20 +112,21 @@ def display(**vars):
     #     time.sleep(1e-5)
     #     plt.pause(1e-5)
 
+
 if __name__ == '__main__':
     args = parse_args()
 
     if args.sync_replay:
         print(">> Replay Index Synced!")
 
-    with U.single_threaded_session(): #U.make_session(8):
+    with U.single_threaded_session():  # U.make_session(8):
         # Create environment
         env = make_env(args.scenario, args)
         # Create agent trainers
         trainers = []
-        #trainers.append(MADDPGAgentTrainer(
+        # trainers.append(MADDPGAgentTrainer(
         #    "agent_%d" % 0, mlp_model, obs_shape_n, env.action_space, 0, args))
-        #trainers.append(DDPGAgentTrainer(
+        # trainers.append(DDPGAgentTrainer(
         #    "agent_%d" % 0, mlp_model, obs_shape_n[0], env.action_space[0], args))
         obs_shape_n = [env.observation_space[i].shape for i in range(env.n)]
         for i in range(env.n):
@@ -132,7 +136,7 @@ if __name__ == '__main__':
                 "agent_%d" % i, mlp_model, obs_shape_n, env.action_space, i, args,
                 use_approx_policy=args.use_approx_policy,
                 sync_replay=args.sync_replay, update_gap=args.update_gap))
-            #trainers.append(DDPGAgentTrainer(
+            # trainers.append(DDPGAgentTrainer(
             #    "agent_%d" % i, mlp_model, obs_shape_n[i], env.action_space[i], args))
 
         # Initialize
@@ -148,8 +152,9 @@ if __name__ == '__main__':
 
         if args.display:
             import matplotlib.pyplot as plt
+
             plt.ion()
-            figure = plt.figure()            
+            figure = plt.figure()
 
         episode_rewards = [0.0]
         agent_rewards = [[0.0] for _ in range(env.n)]
@@ -157,8 +162,6 @@ if __name__ == '__main__':
         obs_n = env.reset()
         episode_step = 0
         t = 0
-        final_ep_rewards = []  # sum of rewards for training curve
-        final_ep_ag_rewards = []  # agent rewards for training curve
 
         logger = MyLogger(args.save_dir + (args.eval_output or 'progress.txt'), not args.restore)
         t_elap = time.time()
@@ -171,20 +174,22 @@ if __name__ == '__main__':
         else:
             train_stats = None
 
-        train_step = 0
-        t_start = time.time()
-
         print('Starting iterations...')
         while True:
             # get action
-            action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
+            action_n = [agent.action(obs) for agent, obs in zip(trainers, obs_n)]
             # environment step
-            new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+            new_obs_n, rew_n, done_n, _ = env.step(action_n)
             episode_step += 1
             done = all(done_n)
             terminal = (episode_step >= args.max_episode_len)
             # collect experience
             for i, agent in enumerate(trainers):
+                curiosities = agent.algo.compute_intrinsic_reward(torch.FloatTensor(obs_n[i]),
+                                                                  torch.FloatTensor(action_n[i]),
+                                                                  torch.FloatTensor(new_obs_n[i]), False, True)
+                rew_n[i] += curiosities.item()
+
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
             obs_n = new_obs_n
 
@@ -199,108 +204,63 @@ if __name__ == '__main__':
                 for a in agent_rewards:
                     a.append(0)
 
-            # increment global step counter
-            train_step += 1
-
-            # if args.evaluate:
-            #     time.sleep(0.05)
-            #     env.render()
-            #     if terminal and (args.eval_output is not None):
-            #         output_str = 'episodes:{}, mean episode reward: {}, agent episode reward: {}'.format(
-            #             len(episode_rewards), np.mean(episode_rewards), [np.mean(rew) for rew in agent_rewards]
-            #         )
-            #         logger.print(output_str)
-            #     continue
-
-            # if args.display:
-            #     display(**locals())
-            if args.display:
-                time.sleep(0.1)
+            if args.evaluate:
+                time.sleep(0.05)
                 env.render()
+                if terminal and (args.eval_output is not None):
+                    output_str = 'episodes:{}, mean episode reward: {}, agent episode reward: {}'.format(
+                        len(episode_rewards), np.mean(episode_rewards), [np.mean(rew) for rew in agent_rewards]
+                    )
+                    logger.print(output_str)
                 continue
 
-            # loss = None
-
-            # for agent in trainers:
-            #     loss = agent.update(trainers, train_step)
+            if args.display:
+                display(**locals())
 
             # update all trainers
             for agent in trainers:
                 agent.preupdate()
-
-            # has_update = False
-
+            has_update = False
             for i, agent in enumerate(trainers):
                 info = agent.update(trainers)
-            #     if info is not None:
-            #         has_update = True
-            #         counter[i] += 1
-            #         _, _, kl = info
-            #         agent_kl[i] += kl
-            #         if train_stats is not None:
-            #             train_stats["kl_agent{}".format(i)].append(kl)
-            # if has_update and (train_stats is not None):
-            #     train_stats["reward"].append(np.mean(episode_rewards[-args.save_rate:]))
-
+                if info is not None:
+                    has_update = True
+                    counter[i] += 1
+                    _, _, kl = info
+                    agent_kl[i] += kl
+                    if train_stats is not None:
+                        train_stats["kl_agent{}".format(i)].append(kl)
+            if has_update and (train_stats is not None):
+                train_stats["reward"].append(np.mean(episode_rewards[-args.save_rate:]))
 
             # save results
-            # if terminal and (len(episode_rewards) % args.save_rate == 0):
-            #     U.save_state(args.save_dir, saver=saver)
-                
-            # display training output
-            # if terminal and ((len(episode_rewards) % args.save_rate == 0) or args.eval_output is not None):
-            #     # save train stats
-            #     if train_stats is not None:
-            #         with open(args.save_dir+args.pickle_file,'wb') as file:
-            #             pickle.dump(train_stats, file)
-            #     dur = (time.time() - t_elap) / 60
-            #     print("steps: {}, episodes: {}, mean episode reward: {}, time: {}".format(
-            #         train_step, len(episode_rewards), np.mean(episode_rewards[-arglist.save_rate:]),
-            #         round(time.time() - t_start, 3)))
-            #
-            #     if counter[0] > 0:
-            #         for i in range(env.n):
-            #             agent_kl[i] /= counter[i]
-            #         avg_kl = np.mean(agent_kl)
-            #     else:
-            #         avg_kl = -1
-            #     output_str = "steps: {}, episodes: {}, time elapsed: {} min, mean episode reward: {}, agent episode reward: {}, avg approx kl: {}".format(
-            #         t, len(episode_rewards), dur, np.mean(episode_rewards[-args.save_rate:]),
-            #         [np.mean(rew[-args.save_rate:]) for rew in agent_rewards], avg_kl)
-            #     if len(episode_rewards) % args.save_rate == 0:
-            #         logger.print(output_str)
-            #     if args.eval_output is not None:
-            #         with open(args.save_dir+args.eval_output, 'a') as f:
-            #             print(output_str, file=f)
-            #     counter = [0] * env.n
-            #     agent_kl = [0.0] * env.n
-            #     t_elap = time.time()
-            # t += 1
-            #
-            # if len(episode_rewards) >= args.total_episodes:
-            #     break
-
-            # save model, display training output
             if terminal and (len(episode_rewards) % args.save_rate == 0):
                 U.save_state(args.save_dir, saver=saver)
-                # print statement depends on whether or not there are adversaries
-                print("steps: {}, episodes: {}, mean episode reward: {}, time: {}".format(
-                    train_step, len(episode_rewards), np.mean(episode_rewards[-args.save_rate:]),
-                    round(time.time() - t_start, 3)))
 
-                t_start = time.time()
-                # Keep track of final episode reward
-                final_ep_rewards.append(np.mean(episode_rewards[-args.save_rate:]))
-                for rew in agent_rewards:
-                    final_ep_ag_rewards.append(np.mean(rew[-args.save_rate:]))
+            # display training output
+            if terminal and ((len(episode_rewards) % args.save_rate == 0) or args.eval_output is not None):
+                # save train stats
+                if train_stats is not None:
+                    with open(args.save_dir + args.pickle_file, 'wb') as file:
+                        pickle.dump(train_stats, file)
+                dur = (time.time() - t_elap) / 60
+                if counter[0] > 0:
+                    for i in range(env.n):
+                        agent_kl[i] /= counter[i]
+                    avg_kl = np.mean(agent_kl)
+                else:
+                    avg_kl = -1
+                output_str = "steps: {}, episodes: {}, time elapsed: {} min, mean episode reward: {}, agent episode reward: {}, avg approx kl: {}".format(
+                    t, len(episode_rewards), dur, np.mean(episode_rewards[-args.save_rate:]),
+                    [np.mean(rew[-args.save_rate:]) for rew in agent_rewards], avg_kl)
+                if len(episode_rewards) % args.save_rate == 0:
+                    logger.print(output_str)
+                if args.eval_output is not None:
+                    with open(args.save_dir + args.eval_output, 'a') as f:
+                        print(output_str, file=f)
+                counter = [0] * env.n
+                agent_kl = [0.0] * env.n
+                t_elap = time.time()
+            t += 1
 
-            # saves final episode reward for plotting training curve later
-            if len(episode_rewards) > args.total_episodes:
-                rew_file_name = args.plots_dir + args.exp_name + '_rewards.pkl'
-                with open(rew_file_name, 'wb') as fp:
-                    pickle.dump(final_ep_rewards, fp)
-                agrew_file_name = args.plots_dir + args.exp_name + '_agrewards.pkl'
-                with open(agrew_file_name, 'wb') as fp:
-                    pickle.dump(final_ep_ag_rewards, fp)
-                print('...Finished total of {} episodes.'.format(len(episode_rewards)))
-                break
+            if len(episode_rewards) >= args.total_episodes: break

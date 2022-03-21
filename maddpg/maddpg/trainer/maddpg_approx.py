@@ -2,13 +2,18 @@ import numpy as np
 import random
 import tensorflow as tf
 import maddpg.common.tf_util as U
+from intrinsic_reward.rnd.rnd import RND
+from maddpg.trainer.maddpg import MADDPGAgentTrainer
+
+from maddpg.trainer.replay_buffer import ReplayBuffer
+from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 
 from maddpg.common.distributions import make_pdtype
-from maddpg.trainer.maddpg import MADDPGAgentTrainer
+# from maddpg.trainer.maddpg import MADDPGAgentTrainer
 from maddpg.trainer.replay_buffer import ReplayBuffer
-from intrinsic_reward.rnd.rnd import RND
+# from intrinsic_reward.rnd.rnd import RND
 
-from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
+# from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 
 def discount_with_dones(rewards, dones, gamma):
     discounted = []
@@ -296,13 +301,10 @@ class MADDPGApproxAgentTrainer(MADDPGAgentTrainer):
         self.replay_sample_index = None
         self.counter += 1
 
-    def update(self, agents, t):
+    def update(self, agents):
         # replay buffer is not large enough
         if len(self.replay_buffer) < self.max_replay_buffer_len:
             return None
-
-        if not t % 100 == 0:  # only update every 100 steps
-            return
 
         if not self.counter % self.update_gap == 0:
             return None

@@ -85,10 +85,10 @@ class Scenario(BaseScenario):
         # print(world.stepp)
 
         # if world.stepp < 10 and EXTRA_REWARD:
-        if EXTRA_REWARD:
+        # if EXTRA_REWARD:
             # dist2 -= np.clip(0.002/dist2, -2, 0.1)
-            if a.communicating:
-                dist2 -= 0.02
+            # if a.communicating:
+            #     dist2 -= 0.02
             # else:
             #     dist2 += 1
         return -dist2
@@ -121,7 +121,7 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent or (other.state.c is None):
                 continue
-            if distance(other.state.p_pos, agent.state.p_pos) < COMMS_DISTANCE:
+            if distance(other.state.p_pos, agent.state.p_pos) <= COMMS_DISTANCE:
                 # print(distance(other.state.p_pos, agent.state.p_pos))
                 comm.append(other.state.c)
                 agent.communicating = True
