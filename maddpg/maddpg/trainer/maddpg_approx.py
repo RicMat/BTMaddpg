@@ -218,7 +218,7 @@ class MADDPGApproxAgentTrainer(MADDPGAgentTrainer):
         self.name = name
         observation_sizes = obs_shape_n[agent_index][0]
         action_sizes = extract_sizes(act_space_n)[agent_index]
-        self.algo = RND(observation_sizes, action_sizes, eta=10)
+        self.algo = RND(observation_sizes, action_sizes, eta=2)
         self.n = len(obs_shape_n)
         self.agent_index = agent_index
         args.num_units = 64
