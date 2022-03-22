@@ -5,18 +5,31 @@ from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
 COMMS_DISTANCE = 0.5
-EXTRA_REWARD = True
+EXTRA_REWARD = False
 
 
 def distance(p1, p2):
     vector = p2 - p1
-    d = np.sqrt(np.sum(np.square(vector)))
+    # print(p2)
+    # print(p1)
+    # print(np.sum(np.square(vector)))
+    # print(np.sqrt(np.sum(np.square(vector))))
+    # d = np.sqrt(np.sum(np.square(vector)))
+    d = np.sum(np.square(vector))
     return d
 
 
 class Scenario(BaseScenario):
     def make_world(self):
+        print("-------")
+        print(" - - - ")
+        print("  ---  ")
+        print("   -   ")
         print("correct")
+        print("   -   ")
+        print("  ---  ")
+        print(" - - - ")
+        print("-------")
         world = World()
         # set any world properties first
         world.dim_c = 3
@@ -71,8 +84,6 @@ class Scenario(BaseScenario):
         for i, landmark in enumerate(world.landmarks):
             landmark.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
-        # world.landmarks[3].state.p_pos = world.agents[0].state.p_pos
-        # world.landmarks[3].size = COMMS_DISTANCE
 
     def benchmark_data(self, agent, world):
         # returns data for benchmarking purposes
@@ -94,22 +105,22 @@ class Scenario(BaseScenario):
         return -dist2
 
     def observation(self, agent, world):
-        # goal color\
-
         if agent.name == 'agent 1':
             world.stepp = (world.stepp + 1) % 25
 
         goal_color = np.zeros(world.dim_color)
+        goal_pos = (np.zeros(world.dim_p))
+
+        communicating = distance(world.agents[1].state.p_pos, world.agents[0].state.p_pos) <= COMMS_DISTANCE
+        # print(communicating)
+
         if agent.goal_b is not None:
             goal_color = agent.goal_b.color
 
         # get positions of all entities in this agent's reference frame
         entity_pos = []
         for entity in world.landmarks:
-            # entity_pos.append(obscure_pos(agent.state.p_pos, entity.state.p_pos))
             entity_pos.append((entity.state.p_pos - agent.state.p_pos))
-            # if entity is world.agents[0].goal_b:
-            #     goal_color = world.agents[0].goal_b.state.p_pos
 
         for other in world.agents:
             if other is agent:
@@ -121,13 +132,11 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent or (other.state.c is None):
                 continue
-            if distance(other.state.p_pos, agent.state.p_pos) <= COMMS_DISTANCE:
-                # print(distance(other.state.p_pos, agent.state.p_pos))
+            if communicating:
                 comm.append(other.state.c)
-                agent.communicating = True
             else:
-                comm.append(np.zeros(other.state.c.shape))
-                agent.communicating = False
+                comm.append(other.state.c)
+                # comm.append(np.zeros(other.state.c.shape))
 
         # speaker
         if not agent.movable:
@@ -137,10 +146,9 @@ class Scenario(BaseScenario):
             for other in world.agents:
                 if other is agent or (other.state.c is None):
                     continue
-                if agent.communicating:
+                if communicating:
                     goal_color = other.goal_b.color
-                else:
-                    goal_color = (np.zeros(world.dim_color))
+                    goal_pos = other.goal_b.state.p_pos - agent.state.p_pos
 
-            return np.concatenate([agent.state.p_vel] + entity_pos + comm)
+            return np.concatenate(goal_pos + entity_pos + comm)  # + [agent.state.p_vel] + entity_pos)# + comm)
             # return np.concatenate([goal_color] + [agent.state.p_vel] + entity_pos)
