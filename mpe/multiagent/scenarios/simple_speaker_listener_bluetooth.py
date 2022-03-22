@@ -4,16 +4,13 @@ from multiagent.scenarios.scenario_util import obscure_pos
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
-COMMS_DISTANCE = 0.5
+COMMS_DISTANCE = 50
 EXTRA_REWARD = False
-
+COMM_EXISTS = False
+GOAL_POS = [0, 0]
 
 def distance(p1, p2):
     vector = p2 - p1
-    # print(p2)
-    # print(p1)
-    # print(np.sum(np.square(vector)))
-    # print(np.sqrt(np.sum(np.square(vector))))
     # d = np.sqrt(np.sum(np.square(vector)))
     d = np.sum(np.square(vector))
     return d
@@ -59,6 +56,11 @@ class Scenario(BaseScenario):
         return world
 
     def reset_world(self, world):
+        global COMM_EXISTS
+        COMM_EXISTS = False
+        global GOAL_POS
+        GOAL_POS = [0, 0]
+
         # assign goals to agents
         for agent in world.agents:
             agent.goal_a = None
@@ -105,6 +107,9 @@ class Scenario(BaseScenario):
         return -dist2
 
     def observation(self, agent, world):
+        global COMM_EXISTS
+        global GOAL_POS
+
         if agent.name == 'agent 1':
             world.stepp = (world.stepp + 1) % 25
 
@@ -112,7 +117,9 @@ class Scenario(BaseScenario):
         goal_pos = (np.zeros(world.dim_p))
 
         communicating = distance(world.agents[1].state.p_pos, world.agents[0].state.p_pos) <= COMMS_DISTANCE
-        # print(communicating)
+        # if communicating and not communication_est:
+        #     communication_est = True
+
 
         if agent.goal_b is not None:
             goal_color = agent.goal_b.color
@@ -141,14 +148,21 @@ class Scenario(BaseScenario):
         # speaker
         if not agent.movable:
             return np.concatenate([goal_color])
+
         # listener
         if agent.silent:
-            for other in world.agents:
-                if other is agent or (other.state.c is None):
-                    continue
-                if communicating:
-                    goal_color = other.goal_b.color
-                    goal_pos = other.goal_b.state.p_pos - agent.state.p_pos
+            other = world.agents[0]
 
-            return np.concatenate(goal_pos + entity_pos + comm)  # + [agent.state.p_vel] + entity_pos)# + comm)
+            # if communicating:
+            #     goal_pos = other.goal_b.state.p_pos - agent.state.p_pos
+
+            if communicating and not COMM_EXISTS:
+                COMM_EXISTS = True
+                GOAL_POS = other.goal_b.state.p_pos
+
+            pos = GOAL_POS - agent.state.p_pos
+            other_pos = other.state.p_pos - agent.state.p_pos
+            return np.concatenate([other_pos] + [pos] + comm)
+
+            # return np.concatenate([agent.state.p_vel] + entity_pos + comm)  # [goal_pos] +  + [agent.state.p_vel] + entity_pos)# + comm)
             # return np.concatenate([goal_color] + [agent.state.p_vel] + entity_pos)
