@@ -162,7 +162,8 @@ class Scenario(BaseScenario):
                 entity_poss = []
                 for i in range(len(entity_pos)):
                     entity_poss.append(np.zeros(2))
-                return np.concatenate([pos] + entity_pos + comm)
+                other_pos = np.zeros(other.state.p_pos.shape)
+                return np.concatenate([pos] + entity_poss + comm)
 
             other_pos = other.state.p_pos - agent.state.p_pos
             return np.concatenate([pos] + entity_pos + comm)  # [other_pos]
@@ -172,3 +173,8 @@ class Scenario(BaseScenario):
 
             # good ones
             # return np.concatenate([other_pos] + [pos] + comm)
+
+
+
+            # 44 with [other_pos] + [pos] + comm
+            # 41 with rew_n[i] += (curiosities.item()/9)

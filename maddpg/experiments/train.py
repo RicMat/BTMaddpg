@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import time
 import pickle
+import torch
 
 import maddpg.common.tf_util as U
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
@@ -126,7 +127,14 @@ def train(arglist):
             terminal = (episode_step >= arglist.max_episode_len)
             # collect experience
             for i, agent in enumerate(trainers):
+                if not arglist.display:
+                    curiosities = agent.algo.compute_intrinsic_reward(torch.FloatTensor(obs_n[i]),
+                                                                      torch.FloatTensor(action_n[i]),
+                                                                      torch.FloatTensor(new_obs_n[i]), False, True)
+                    rew_n[i] += (curiosities.item()/10)
+
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
+
             obs_n = new_obs_n
 
             for i, rew in enumerate(rew_n):
