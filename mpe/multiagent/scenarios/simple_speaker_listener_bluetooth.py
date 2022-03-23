@@ -4,7 +4,7 @@ from multiagent.scenarios.scenario_util import obscure_pos
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
-COMMS_DISTANCE = 50
+COMMS_DISTANCE = 0.5
 EXTRA_REWARD = False
 COMM_EXISTS = False
 GOAL_POS = [0, 0]
@@ -44,7 +44,7 @@ class Scenario(BaseScenario):
         # listener
         world.agents[1].silent = True
         # add landmarks
-        world.landmarks = [Landmark() for i in range(num_landmarks)]  # +1
+        world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
@@ -75,7 +75,6 @@ class Scenario(BaseScenario):
         world.landmarks[0].color = np.array([0.65, 0.15, 0.15])
         world.landmarks[1].color = np.array([0.15, 0.65, 0.15])
         world.landmarks[2].color = np.array([0.15, 0.15, 0.65])
-        # world.landmarks[3].color = np.array([0.99, 0.99, 0.95])
         # special colors for goals
         world.agents[0].goal_a.color = world.agents[0].goal_b.color + np.array([0.45, 0.45, 0.45])
         # set random initial states
@@ -95,7 +94,6 @@ class Scenario(BaseScenario):
         # squared distance from listener to landmark
         a = world.agents[0]
         dist2 = np.sum(np.square(a.goal_a.state.p_pos - a.goal_b.state.p_pos))
-        # print(world.stepp)
 
         # if world.stepp < 10 and EXTRA_REWARD:
         # if EXTRA_REWARD:
@@ -117,9 +115,6 @@ class Scenario(BaseScenario):
         goal_pos = (np.zeros(world.dim_p))
 
         communicating = distance(world.agents[1].state.p_pos, world.agents[0].state.p_pos) <= COMMS_DISTANCE
-        # if communicating and not communication_est:
-        #     communication_est = True
-
 
         if agent.goal_b is not None:
             goal_color = agent.goal_b.color
@@ -142,8 +137,7 @@ class Scenario(BaseScenario):
             if communicating:
                 comm.append(other.state.c)
             else:
-                comm.append(other.state.c)
-                # comm.append(np.zeros(other.state.c.shape))
+                comm.append(np.zeros(other.state.c.shape))
 
         # speaker
         if not agent.movable:
@@ -161,8 +155,20 @@ class Scenario(BaseScenario):
                 GOAL_POS = other.goal_b.state.p_pos
 
             pos = GOAL_POS - agent.state.p_pos
+
+            if COMM_EXISTS:
+                comm = []
+                comm.append(np.zeros(other.state.c.shape))
+                entity_poss = []
+                for i in range(len(entity_pos)):
+                    entity_poss.append(np.zeros(2))
+                return np.concatenate([pos] + entity_pos + comm)
+
             other_pos = other.state.p_pos - agent.state.p_pos
-            return np.concatenate([other_pos] + [pos] + comm)
+            return np.concatenate([pos] + entity_pos + comm)  # [other_pos]
 
             # return np.concatenate([agent.state.p_vel] + entity_pos + comm)  # [goal_pos] +  + [agent.state.p_vel] + entity_pos)# + comm)
             # return np.concatenate([goal_color] + [agent.state.p_vel] + entity_pos)
+
+            # good ones
+            # return np.concatenate([other_pos] + [pos] + comm)
